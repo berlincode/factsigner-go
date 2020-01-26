@@ -1,3 +1,11 @@
+// Copyright factsigner.com
+//
+// This file is part of the factsigner-go library.
+//
+// Public repository: https://github.com/berlincode/factsigner-go
+//
+// Code is licensed under the MIT license.
+
 package factsigner
 
 import (
