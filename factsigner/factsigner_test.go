@@ -1,4 +1,3 @@
-// start with: go run test.go
 package factsigner
 
 import "testing"
@@ -29,7 +28,14 @@ func TestFactsigner(t *testing.T) {
     }
 
     facts := Facts{
-        underlyingString: "BTC/USDT"}
+        UnderlyingString: "BTC/USDT",
+        ExpirationDatetime: 0x3a4fc880,
+        ObjectionPeriod: 0x000e10,
+        Config: 0x05,
+        MarketCategory: 0x00, // TODO enum
+        BaseUnitExp: 0x12, // TODO baseUnitExp integger calculcation
+        Ndigit: 0x02};
+
     hash := FactHash(facts)
 
     checkStrings ("factHash", hex.EncodeToString(hash), "5231a3f9078d41055464a715da1116e394ef5a63496a5e840768875a731f635b", t)

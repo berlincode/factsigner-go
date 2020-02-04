@@ -18,6 +18,7 @@ import (
     "strings"
     "errors"
     "math/big"
+    "encoding/binary"
 )
 
 
@@ -39,7 +40,13 @@ type Signature struct {
 }
 
 type Facts struct {
-    underlyingString string
+    UnderlyingString string
+    ExpirationDatetime uint64 // uint40
+    ObjectionPeriod uint32 // uint24
+    Config uint8 // uint8
+    MarketCategory uint8 // uint8
+    BaseUnitExp uint8 // uint8
+    Ndigit uint8 // uint8
 }
 
 func Sign(message []byte, privkey *ecdsa.PrivateKey) Signature {
@@ -105,20 +112,36 @@ func NewPrivateKeyByHex(privateKeyHex string) (*ecdsa.PrivateKey, error) {
 //     return b
 // }
 
+func uint64ToBytes(num uint64) []byte {
+    bs := make([]byte, 8)
+    binary.BigEndian.PutUint64(bs, num)
+    return bs
+}
+
+func uint32ToBytes(num uint32) []byte {
+    bs := make([]byte, 4)
+    binary.BigEndian.PutUint32(bs, num)
+    return bs
+}
+
+func uint8ToBytes(num uint8) []byte {
+    return []byte([]uint8{num,})
+}
+
 func FactHash(facts Facts) []byte {
     underlyingHash := sha3.NewLegacyKeccak256()
-    underlyingHash.Write([]byte(facts.underlyingString))
-    fmt.Println("underlyingHash",  hex.EncodeToString(underlyingHash.Sum(nil)))
+    underlyingHash.Write([]byte(facts.UnderlyingString))
+    //fmt.Println("underlyingHash",  hex.EncodeToString(underlyingHash.Sum(nil)))
 
     hash := sha3.NewLegacyKeccak256()
+
     hash.Write(underlyingHash.Sum(nil))
-    hash.Write(HexString2Bytes(
-        "003a4fc880" + // uint40
-        "000e10" + // uint24
-        "05" + // uint8
-        "00" + // uint8
-        "12" + // uint8
-        "02" + // int8
-        ""))
+    hash.Write(uint64ToBytes(facts.ExpirationDatetime)[3:8]) // uint40 (take lower 5 bytes)
+    hash.Write(uint32ToBytes(facts.ObjectionPeriod)[1:4]) // uint24 (take lower 3 bytes)
+    hash.Write(uint8ToBytes(facts.Config)) // uint8
+    hash.Write(uint8ToBytes(facts.MarketCategory)) // uint8
+    hash.Write(uint8ToBytes(facts.BaseUnitExp)) // uint8
+    hash.Write(uint8ToBytes(facts.Ndigit)) // uint8
+
     return hash.Sum(nil)
 }
