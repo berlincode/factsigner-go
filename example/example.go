@@ -1,59 +1,71 @@
-// start with: go run example.go
 package main
 
-// import "github.com/berlincode/factsigner-go/factsigner"
-import "github.com/berlincode/factsigner-go/factsigner"
-import "fmt"
-import "encoding/hex"
-
-// func checkStrings (explain string, str string, wanted string, t *testing.T){
-//     if str != wanted {
-//         t.Errorf("Failed compare: %s (is=%q, expected=%q)", explain, str, wanted)
-//     }
-// }
+import (
+    "github.com/berlincode/factsigner-go/factsigner"
+    "fmt"
+    "encoding/hex"
+)
 
 func main() {
 
-//     var buf []byte
+    //expirationDatetime := uint64(time.Now().Unix() + 2*3600)
+    expirationDatetime := uint64(1580930067+10*3600) // TODO
+    privateKey, err := factsigner.NewPrivateKeyByHex("53b63c349b51ce23793f7ace0d116b7cdb5ee83b8667781feae7a98e5d1043ec")
 
-// {
-//   "addr": "0x17078c5cC530Be97690a4606129ab65b24f98dC8",
-//   "pk": "0x53b63c349b51ce23793f7ace0d116b7cdb5ee83b8667781feae7a98e5d1043ec",
-//   "mnemonic": "carpet sail clarify tragic analyst bone pole connect blue casual various walk"
-// }
-
-//     privateKey, err := NewPrivateKeyByHex("53b63c349b51ce23793f7ace0d116b7cdb5ee83b8667781feae7a98e5d1043ec")
-
-    privateKey, err := factsigner.NewPrivateKeyByHex("348ce564d427a3311b6536bbcff9390d69395b06ed6c486954e971d960fe8709")
     if err != nil {
-            panic(err)
+        panic(err)
     }
 
     facts := factsigner.Facts{
-        UnderlyingString: "BTC/USDT",
-        ExpirationDatetime: 0x3a4fc880,
-        ObjectionPeriod: 0x000e10,
-        Config: 0x05,
+        UnderlyingString: "Test BTC/USDT",
+        ExpirationDatetime: expirationDatetime, // TODO
+        ObjectionPeriod: 3600,
+        Config: 0x05, // TODO
         MarketCategory: 0x00, // TODO enum
-        BaseUnitExp: 0x12, // TODO baseUnitExp integger calculcation
+        BaseUnitExp: 0x12, // TODO baseUnitExp integer calculcation
         Ndigit: 0x02};
 
-    hash := factsigner.FactHash(facts)
+    factHash := factsigner.FactHash(facts)
+    fmt.Println("factHash", hex.EncodeToString(factHash[:]))
 
-//     checkStrings ("factHash", hex.EncodeToString(hash), "5231a3f9078d41055464a715da1116e394ef5a63496a5e840768875a731f635b", t)
+    // create
+    // https://berlincode.github.io/digioptions-contracts-web-examples/market_create.html#?
+    //     settlementDatetime=1572901200&
+    //     baseUnitExp=18&
+    //     objectionPeriod=3600&
+    //     ndigit=0&
+    //     underlyingString=US2605661048&
+    //     signatureFactHash=%7B%0A++%22r%22%3A+%220x7caf800c43d461bffa6d22bfa2e86fcbbeacc3f02cec008ca05640d78116f9de%22%2C%0A++%22s%22%3A+%220x2e6a7600d8bb52e3868f3a6df4ee63e957df89e7e170f6f63b354d91ef7ecb3d%22%2C%0A++%22v%22%3A+28%0A%7D&
+    //     signerAddr=0x6b608020f7a66c727154ed65208e40f9e105f6b8
 
-    signature := factsigner.Sign(hash, privateKey)
+    signatureCreate := factsigner.Sign(factHash, privateKey)
 
-//     checkStrings ("signature.R", hex.EncodeToString(signature.R[:]), "8e5fe9f3ab83923071809a265de063e1adb2862b57b1d2a81da669792036be3f", t)
-//     checkStrings ("signature.S", hex.EncodeToString(signature.S[:]), "381b0a6c319533c641c27bb702de6205a4d0267af738979771a87030b3e87e3f", t)
-//     checkStrings ("signature.V", fmt.Sprintf("%x", signature.V), "1c", t)
+    fmt.Println("Signature market create")
+    fmt.Println("R", hex.EncodeToString(signatureCreate.R[:]))
+    fmt.Println("S", hex.EncodeToString(signatureCreate.S[:]))
+    fmt.Println("V", signatureCreate.V)
 
-    // TODO test signature
+    // https://berlincode.github.io/digioptions-contracts-web-examples/market_create.html#?
+    //     signatureFinal=%7B%0A++%22r%22%3A+%220x91ecdf95a8b63c12fce30d1b431ae17e0a4ff03f4abe2e9c01c57702ba071d52%22%2C%0A++%22s%22%3A+%220x53c1e0816060faf823402cbc810d380d14e929d76b955cda1173245bad4cf5e2%22%2C%0A++%22v%22%3A+28%0A%7D&
+    //     finalValue=0.266&
+    //     signerAddr=0x49b6d897575b0769d45eba7e2de60a16de5b8c13
 
-    fmt.Println("factHash", hex.EncodeToString(hash))
-    fmt.Println("R", hex.EncodeToString(signature.R[:]))
-    fmt.Println("S", hex.EncodeToString(signature.S[:]))
-    fmt.Println("V", signature.V)
+    var value [32]byte // TODO
 
-    fmt.Println("ok")
+    settlementData := factsigner.SettlementData{
+        FactHash: factHash,
+        Value: value,
+        SettlementType: 0};
+
+    factsigner.SettlementHash(settlementData)
+
+    signatureSettle := factsigner.Sign(factHash, privateKey)
+
+    fmt.Println("Signature market settle")
+    fmt.Println("R", hex.EncodeToString(signatureSettle.R[:]))
+    fmt.Println("S", hex.EncodeToString(signatureSettle.S[:]))
+    fmt.Println("V", signatureSettle.V)
+
+
+
 }

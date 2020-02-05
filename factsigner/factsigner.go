@@ -13,6 +13,7 @@ import (
     "strconv"
     "github.com/ethereum/go-ethereum/crypto"
     "crypto/ecdsa"
+    "crypto/elliptic"
     "golang.org/x/crypto/sha3"
     "encoding/hex"
     "strings"
@@ -49,13 +50,19 @@ type Facts struct {
     Ndigit uint8 // uint8
 }
 
-func Sign(message []byte, privkey *ecdsa.PrivateKey) Signature {
+type SettlementData struct {
+    FactHash [32]byte // bytes32
+    Value [32]byte // int256
+    SettlementType uint16
+}
 
-    validationMsg := "\x19Factsigner Signed Message:\n" + strconv.Itoa(len(message))// + message
+func Sign(message [32]byte, privkey *ecdsa.PrivateKey) Signature {
+
+    validationMsg := "\x19Factsigner Signed Message:\n" + strconv.Itoa(len(message))
 
     hash := sha3.NewLegacyKeccak256()
     hash.Write([]byte(validationMsg))
-    hash.Write(message)
+    hash.Write(message[:])
     hashRaw := hash.Sum(nil)
 
     signature, err := crypto.Sign(hashRaw, privkey)
@@ -103,14 +110,25 @@ func NewPrivateKeyByHex(privateKeyHex string) (*ecdsa.PrivateKey, error) {
     return NewPrivateKey(privateKeyBytes)
 }
 
-// func decodeHex(s string) []byte {
-//     b, err := hex.DecodeString(s)
-//     if err != nil {
-//         panic(err)
-//     }
+func Keccak256(data ...[]byte) []byte {
+    d := sha3.NewLegacyKeccak256()
+    for _, b := range data {
+        d.Write(b)
+    }
+    return d.Sum(nil)
+}
 
-//     return b
-// }
+func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
+    if pub == nil || pub.X == nil || pub.Y == nil {
+        return nil
+    }
+    return elliptic.Marshal(crypto.S256(), pub.X, pub.Y)
+}
+
+func PubkeyToAddress(p ecdsa.PublicKey) []byte {
+    pubBytes := FromECDSAPub(&p)
+    return Keccak256(pubBytes[1:])[12:]
+}
 
 func uint64ToBytes(num uint64) []byte {
     bs := make([]byte, 8)
@@ -124,14 +142,19 @@ func uint32ToBytes(num uint32) []byte {
     return bs
 }
 
+func uint16ToBytes(num uint16) []byte {
+    bs := make([]byte, 2)
+    binary.BigEndian.PutUint16(bs, num)
+    return bs
+}
+
 func uint8ToBytes(num uint8) []byte {
     return []byte([]uint8{num,})
 }
 
-func FactHash(facts Facts) []byte {
+func FactHash(facts Facts) [32]byte {
     underlyingHash := sha3.NewLegacyKeccak256()
     underlyingHash.Write([]byte(facts.UnderlyingString))
-    //fmt.Println("underlyingHash",  hex.EncodeToString(underlyingHash.Sum(nil)))
 
     hash := sha3.NewLegacyKeccak256()
 
@@ -143,5 +166,21 @@ func FactHash(facts Facts) []byte {
     hash.Write(uint8ToBytes(facts.BaseUnitExp)) // uint8
     hash.Write(uint8ToBytes(facts.Ndigit)) // uint8
 
-    return hash.Sum(nil)
+    var factHash [32]byte
+    copy(factHash[:], hash.Sum(nil))
+
+    return factHash
+}
+
+func SettlementHash(settlementData SettlementData) [32]byte {
+    hash := sha3.NewLegacyKeccak256()
+
+    hash.Write(settlementData.FactHash[:]) // bytes32
+    hash.Write(settlementData.Value[:]) // int256
+    hash.Write(uint16ToBytes(settlementData.SettlementType)) // uint16
+
+    var settlementHash [32]byte
+    copy(settlementHash[:], hash.Sum(nil))
+
+    return settlementHash
 }

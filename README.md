@@ -5,6 +5,9 @@ factsigner-go
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?label=license)](https://github.com/berlincode/factsigner/blob/master/LICENSE)
 [![Version](https://img.shields.io/github/v/tag/berlincode/factsigner-go.svg?label=version&sort=semver&logo=github)](https://github.com/berlincode/factsigner-go)
 
+
+Provable signatures of real life events (go)
+
 This repository contains a go implementation to create signatures compatible with [FactSigner.com](https://www.factsigner.com/) signing
 authority.
 
